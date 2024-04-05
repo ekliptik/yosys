@@ -188,6 +188,7 @@ struct AlumaccWorker
 
 	static bool macc_may_overflow(Macc &macc, int width, bool is_signed)
 	{
+		// Sizes of all internal summands
 		std::vector<int> port_sizes;
 
 		for (auto &port : macc.ports) {
@@ -203,6 +204,7 @@ struct AlumaccWorker
 
 		std::sort(port_sizes.begin(), port_sizes.end());
 
+		// TODO recheck Martin's explanation and document it
 		int acc_sum = 0, acc_shift = 0;
 		for (int sz : port_sizes) {
 			while ((sz - acc_shift) > 20) {
@@ -214,6 +216,7 @@ struct AlumaccWorker
 			acc_sum += (1 << (sz - acc_shift)) - 1;
 		}
 
+		// acc_shift += bits_to_store_acc_sum (== floor(log2(2*acc_sum)) )
 		while (acc_sum) {
 			acc_sum = acc_sum >> 1;
 			acc_shift++;
@@ -239,11 +242,13 @@ struct AlumaccWorker
 				{
 					auto &port = n->macc.ports[i];
 
+					// Can't merge this port into n if it multiplies (or if no $macc wired to in_a)
 					if (GetSize(port.in_b) > 0 || sig_macc.count(port.in_a) == 0)
 						continue;
 
 					auto other_n = sig_macc.at(port.in_a);
 
+					// Merging maccs used by other logic is safe but would duplicate the computation
 					if (other_n->users > 1)
 						continue;
 
@@ -256,6 +261,8 @@ struct AlumaccWorker
 					for (int j = 0; j < GetSize(other_n->macc.ports); j++) {
 						if (do_subtract)
 							other_n->macc.ports[j].do_subtract = !other_n->macc.ports[j].do_subtract;
+						// First port of other_n replaces the port of n that other_n connects to
+						// All other ports of other_n are added to the ports of n 
 						if (j == 0)
 							n->macc.ports[i--] = other_n->macc.ports[j];
 						else
@@ -276,6 +283,7 @@ struct AlumaccWorker
 		}
 	}
 
+	// Transform sum-only $macc cells to $alu
 	void macc_to_alu()
 	{
 		pool<maccnode_t*, hash_ptr_ops> delete_nodes;
@@ -283,6 +291,7 @@ struct AlumaccWorker
 		for (auto &it : sig_macc)
 		{
 			auto n = it.second;
+			// Input signals for ALU. Mutated
 			RTLIL::SigSpec A, B, C = n->macc.bit_ports;
 			bool a_signed = false, b_signed = false;
 			bool subtract_b = false;
@@ -290,10 +299,17 @@ struct AlumaccWorker
 
 			for (auto &port : n->macc.ports)
 				if (GetSize(port.in_b) > 0) {
+					// Can't transform to $alu when we actually multiply
 					goto next_macc;
 				} else if (GetSize(port.in_a) == 1 && !port.is_signed && !port.do_subtract) {
+					// 1-bit in_a is equivalent to a bit input, so append it to C which was
+					// initialized to bit inputs
 					C.append(port.in_a);
 				} else if (GetSize(A) || port.do_subtract) {
+					// This block is reachable when:
+					// - we already have the A $alu summand
+					// - we don't have any $alu summands and want to set B to subtract in_a
+					// In both cases, we want to set B, but can only do that if it's unset.
 					if (GetSize(B))
 						goto next_macc;
 					B = port.in_a;
@@ -311,26 +327,34 @@ struct AlumaccWorker
 					a_signed = false;
 				if (GetSize(B) == GetSize(n->y))
 					b_signed = false;
+				// $alu operands must have matched signedness.
+				// This goto is reachable iff one of the inputs was unsigned and the signed one
+				// doesn't match Y length
 				if (a_signed != b_signed)
 					goto next_macc;
 			}
 
+			// If no summand, stuff the first bit summand into it
 			if (GetSize(A) == 0 && GetSize(C) > 0) {
 				A = C[0];
 				C.remove(0);
 			}
 
+			// Ditto
 			if (GetSize(B) == 0 && GetSize(C) > 0) {
 				B = C[0];
 				C.remove(0);
 			}
 
+			// Convert subtraction to inversion of B ($alu feature) and adding const 1
 			if (subtract_b)
 				C.append(State::S1);
 
+			// $alu can only have one carry input
 			if (GetSize(C) > 1)
 				goto next_macc;
 
+			// Prefer first summand bigger
 			if (!subtract_b && B < A && GetSize(B))
 				std::swap(A, B);
 

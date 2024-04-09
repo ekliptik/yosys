@@ -60,6 +60,7 @@ struct FlattenWorker
 	bool ignore_wb = false;
 	bool create_scopeinfo = true;
 	bool create_scopename = false;
+	int max_cost = INT_MAX;
 
 	template<class T>
 	void map_attributes(RTLIL::Cell *cell, T *object, IdString orig_object_name)
@@ -304,6 +305,12 @@ struct FlattenWorker
 				continue;
 			}
 
+			if (tpl->has_attribute(ID::cost) && tpl->attributes[ID::cost].as_int() > max_cost) {
+				log("Keeping %s.%s (module too big).\n", log_id(module), log_id(cell));
+				used_modules.insert(tpl);
+				continue;
+			}
+
 			log_debug("Flattening %s.%s (%s).\n", log_id(module), log_id(cell), log_id(cell->type));
 			// If a design is fully selected and has a top module defined, topological sorting ensures that all cells
 			// added during flattening are black boxes, and flattening is finished in one pass. However, when flattening
@@ -365,6 +372,13 @@ struct FlattenPass : public Pass {
 			}
 			if (args[argidx] == "-scopename") {
 				worker.create_scopename = true;
+				continue;
+			}
+			// TODO when maxcost is used, all modules in top should have costs estimated.
+			// If not, it would be best to automagically run cellestimate on them instead
+			// of ignoring them
+			if (args[argidx] == "-maxcost"  && argidx+1 < args.size()) {
+				worker.max_cost = std::stoi(args[++argidx]);
 				continue;
 			}
 			break;

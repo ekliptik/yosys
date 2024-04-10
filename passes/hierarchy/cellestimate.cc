@@ -69,7 +69,7 @@ struct CellEstimatePass : public Pass {
                 if (has_known_cost)
                     cells_known_cost++;
 
-				int cost = has_known_cost ? cell_cost.at(cell->type) : 0;
+				int cost = has_known_cost ? cell_cost.at(cell->type) : 1;
 				log_debug("Cost for cell %s (%s): %d\n", log_id(cell), log_id(cell->type), cost);
 				module_cost += cost;
 			}

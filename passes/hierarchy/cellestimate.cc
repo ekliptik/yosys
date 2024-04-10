@@ -77,7 +77,7 @@ struct CellEstimatePass : public Pass {
 			module->attributes[ID::cost] = module_cost;
 		}
         float known_percent = (static_cast<double>(cells_known_cost) / cell_count) * 100.0;
-		if (!isnan(known_percent))
+		if (!std::isnan(known_percent))
 			log("Cost estimates known for %.0f%% cells\n", known_percent);
 	}
 } ZinitPass;

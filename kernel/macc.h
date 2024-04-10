@@ -24,6 +24,7 @@
 
 YOSYS_NAMESPACE_BEGIN
 
+
 struct Macc
 {
 	struct port_t {
@@ -31,6 +32,7 @@ struct Macc
 		bool is_signed, do_subtract;
 	};
 
+	const int num_bits = 16;
 	std::vector<port_t> ports;
 	RTLIL::SigSpec bit_ports;
 
@@ -47,11 +49,6 @@ struct Macc
 
 			if (GetSize(port.in_a) < GetSize(port.in_b))
 				std::swap(port.in_a, port.in_b);
-
-			if (GetSize(port.in_a) == 1 && GetSize(port.in_b) == 0 && !port.is_signed && !port.do_subtract) {
-				bit_ports.append(port.in_a);
-				continue;
-			}
 
 			if (port.in_a.is_fully_const() && port.in_b.is_fully_const()) {
 				RTLIL::Const v = port.in_a.as_const();
@@ -110,12 +107,6 @@ struct Macc
 		int config_width = cell->getParam(ID::CONFIG_WIDTH).as_int();
 		log_assert(GetSize(config_bits) >= config_width);
 
-		int num_bits = 0;
-		if (config_bits[config_cursor++] == State::S1) num_bits |= 1;
-		if (config_bits[config_cursor++] == State::S1) num_bits |= 2;
-		if (config_bits[config_cursor++] == State::S1) num_bits |= 4;
-		if (config_bits[config_cursor++] == State::S1) num_bits |= 8;
-
 		int port_a_cursor = 0;
 		while (port_a_cursor < GetSize(port_a))
 		{
@@ -130,6 +121,7 @@ struct Macc
 				if (config_bits[config_cursor++] == State::S1)
 					size_a |= 1 << i;
 
+			log_assert(size_a);
 			this_port.in_a = port_a.extract(port_a_cursor, size_a);
 			port_a_cursor += size_a;
 
@@ -138,11 +130,11 @@ struct Macc
 				if (config_bits[config_cursor++] == State::S1)
 					size_b |= 1 << i;
 
+			log_assert(size_b);
 			this_port.in_b = port_a.extract(port_a_cursor, size_b);
 			port_a_cursor += size_b;
 
-			if (size_a || size_b)
-				ports.push_back(this_port);
+			ports.push_back(this_port);
 		}
 
 		log_assert(config_cursor == config_width);
@@ -153,25 +145,21 @@ struct Macc
 	{
 		RTLIL::SigSpec port_a;
 		std::vector<RTLIL::State> config_bits;
-		int max_size = 0, num_bits = 0;
+		int max_size = 0;
+		const int num_bits = 16;
 
 		for (auto &port : ports) {
 			max_size = max(max_size, GetSize(port.in_a));
 			max_size = max(max_size, GetSize(port.in_b));
 		}
 
-		while (max_size)
-			num_bits++, max_size /= 2;
-
-		log_assert(num_bits < 16);
-		config_bits.push_back(num_bits & 1 ? State::S1 : State::S0);
-		config_bits.push_back(num_bits & 2 ? State::S1 : State::S0);
-		config_bits.push_back(num_bits & 4 ? State::S1 : State::S0);
-		config_bits.push_back(num_bits & 8 ? State::S1 : State::S0);
+		log_assert(max_size <= 16);
 
 		for (auto &port : ports)
 		{
 			if (GetSize(port.in_a) == 0)
+				continue;
+			if (GetSize(port.in_b) == 0)
 				continue;
 
 			config_bits.push_back(port.is_signed ? State::S1 : State::S0);
@@ -207,11 +195,7 @@ struct Macc
 			if (!port.in_a.is_fully_const() || !port.in_b.is_fully_const())
 				return false;
 
-			RTLIL::Const summand;
-			if (GetSize(port.in_b) == 0)
-				summand = const_pos(port.in_a.as_const(), port.in_b.as_const(), port.is_signed, port.is_signed, GetSize(result));
-			else
-				summand = const_mul(port.in_a.as_const(), port.in_b.as_const(), port.is_signed, port.is_signed, GetSize(result));
+			RTLIL::Const summand = const_mul(port.in_a.as_const(), port.in_b.as_const(), port.is_signed, port.is_signed, GetSize(result));
 
 			if (port.do_subtract)
 				result = const_sub(result, summand, port.is_signed, port.is_signed, GetSize(result));

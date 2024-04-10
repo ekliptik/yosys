@@ -760,28 +760,18 @@ bool SatGen::importCell(RTLIL::Cell *cell, int timestep)
 				in_a.push_back(port.is_signed && !in_a.empty() ? in_a.back() : ez->CONST_FALSE);
 			in_a.resize(GetSize(y));
 
-			if (GetSize(in_b))
-			{
-				while (GetSize(in_b) < GetSize(y))
-					in_b.push_back(port.is_signed && !in_b.empty() ? in_b.back() : ez->CONST_FALSE);
-				in_b.resize(GetSize(y));
+			while (GetSize(in_b) < GetSize(y))
+				in_b.push_back(port.is_signed && !in_b.empty() ? in_b.back() : ez->CONST_FALSE);
+			in_b.resize(GetSize(y));
 
-				for (int i = 0; i < GetSize(in_b); i++) {
-					std::vector<int> shifted_a(in_a.size(), ez->CONST_FALSE);
-					for (int j = i; j < int(in_a.size()); j++)
-						shifted_a.at(j) = in_a.at(j-i);
-					if (port.do_subtract)
-						tmp = ez->vec_ite(in_b.at(i), ez->vec_sub(tmp, shifted_a), tmp);
-					else
-						tmp = ez->vec_ite(in_b.at(i), ez->vec_add(tmp, shifted_a), tmp);
-				}
-			}
-			else
-			{
+			for (int i = 0; i < GetSize(in_b); i++) {
+				std::vector<int> shifted_a(in_a.size(), ez->CONST_FALSE);
+				for (int j = i; j < int(in_a.size()); j++)
+					shifted_a.at(j) = in_a.at(j-i);
 				if (port.do_subtract)
-					tmp = ez->vec_sub(tmp, in_a);
+					tmp = ez->vec_ite(in_b.at(i), ez->vec_sub(tmp, shifted_a), tmp);
 				else
-					tmp = ez->vec_add(tmp, in_a);
+					tmp = ez->vec_ite(in_b.at(i), ez->vec_add(tmp, shifted_a), tmp);
 			}
 		}
 

@@ -110,8 +110,7 @@ struct ShareWorker
 
 	static int bits_macc_port(const Macc::port_t &p, int width)
 	{
-		if (GetSize(p.in_a) == 0 || GetSize(p.in_b) == 0)
-			return min(max(GetSize(p.in_a), GetSize(p.in_b)), width);
+		log_assert(GetSize(p.in_a) && GetSize(p.in_b));
 		return min(GetSize(p.in_a), width) * min(GetSize(p.in_b), width) / 2;
 	}
 
@@ -132,14 +131,11 @@ struct ShareWorker
 
 	static bool cmp_macc_ports(const Macc::port_t &p1, const Macc::port_t &p2)
 	{
-		bool mul1 = GetSize(p1.in_a) && GetSize(p1.in_b);
-		bool mul2 = GetSize(p2.in_a) && GetSize(p2.in_b);
+		log_assert(GetSize(p1.in_a) && GetSize(p1.in_b));
+		log_assert(GetSize(p2.in_a) && GetSize(p2.in_b));
 
-		int w1 = mul1 ? GetSize(p1.in_a) * GetSize(p1.in_b) : GetSize(p1.in_a) + GetSize(p1.in_b);
-		int w2 = mul2 ? GetSize(p2.in_a) * GetSize(p2.in_b) : GetSize(p2.in_a) + GetSize(p2.in_b);
-
-		if (mul1 != mul2)
-			return mul1;
+		int w1 = GetSize(p1.in_a) * GetSize(p1.in_b);
+		int w2 = GetSize(p2.in_a) * GetSize(p2.in_b);
 
 		if (w1 != w2)
 			return w1 > w2;
@@ -165,22 +161,19 @@ struct ShareWorker
 		if (p1.do_subtract != p2.do_subtract)
 			return -1;
 
-		bool mul1 = GetSize(p1.in_a) && GetSize(p1.in_b);
-		bool mul2 = GetSize(p2.in_a) && GetSize(p2.in_b);
-
-		if (mul1 != mul2)
-			return -1;
+		log_assert(GetSize(p1.in_a) && GetSize(p1.in_b));
+		log_assert(GetSize(p2.in_a) && GetSize(p2.in_b));
 
 		bool force_signed = false, force_not_signed = false;
 
-		if ((GetSize(p1.in_a) && GetSize(p1.in_a) < w1) || (GetSize(p1.in_b) && GetSize(p1.in_b) < w1)) {
+		if ((GetSize(p1.in_a) < w1) || (GetSize(p1.in_b) < w1)) {
 			if (p1.is_signed)
 				force_signed = true;
 			else
 				force_not_signed = true;
 		}
 
-		if ((GetSize(p2.in_a) && GetSize(p2.in_a) < w2) || (GetSize(p2.in_b) && GetSize(p2.in_b) < w2)) {
+		if ((GetSize(p2.in_a) < w2) || (GetSize(p2.in_b) < w2)) {
 			if (p2.is_signed)
 				force_signed = true;
 			else
@@ -281,12 +274,12 @@ struct ShareWorker
 			RTLIL::SigSpec sig_a = m1.ports[i].in_a;
 			RTLIL::SigSpec sig_b = m1.ports[i].in_b;
 
-			if (supercell_aux && GetSize(sig_a)) {
+			log_assert(GetSize(sig_a) && GetSize(sig_b));
+
+			if (supercell_aux) {
 				sig_a = module->addWire(NEW_ID, GetSize(sig_a));
 				supercell_aux->insert(module->addMux(NEW_ID, RTLIL::SigSpec(0, GetSize(sig_a)), m1.ports[i].in_a, act, sig_a));
-			}
 
-			if (supercell_aux && GetSize(sig_b)) {
 				sig_b = module->addWire(NEW_ID, GetSize(sig_b));
 				supercell_aux->insert(module->addMux(NEW_ID, RTLIL::SigSpec(0, GetSize(sig_b)), m1.ports[i].in_b, act, sig_b));
 			}
@@ -304,12 +297,12 @@ struct ShareWorker
 			RTLIL::SigSpec sig_a = m2.ports[i].in_a;
 			RTLIL::SigSpec sig_b = m2.ports[i].in_b;
 
-			if (supercell_aux && GetSize(sig_a)) {
+			log_assert(GetSize(sig_a) && GetSize(sig_b));
+
+			if (supercell_aux) {
 				sig_a = module->addWire(NEW_ID, GetSize(sig_a));
 				supercell_aux->insert(module->addMux(NEW_ID, m2.ports[i].in_a, RTLIL::SigSpec(0, GetSize(sig_a)), act, sig_a));
-			}
 
-			if (supercell_aux && GetSize(sig_b)) {
 				sig_b = module->addWire(NEW_ID, GetSize(sig_b));
 				supercell_aux->insert(module->addMux(NEW_ID, m2.ports[i].in_b, RTLIL::SigSpec(0, GetSize(sig_b)), act, sig_b));
 			}

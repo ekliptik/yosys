@@ -129,7 +129,7 @@ struct CleanZeroWidthPass : public Pass {
 					if (cell->getParam(ID::Y_WIDTH).as_int() == 0) {
 						module->remove(cell);
 					} else if (cell->type == ID($macc)) {
-						// TODO: fixing zero-width A and B not supported.
+						// fixing zero-width A and B not supported.
 					} else {
 						if (cell->getParam(ID::A_WIDTH).as_int() == 0) {
 							cell->setPort(ID::A, State::S0);

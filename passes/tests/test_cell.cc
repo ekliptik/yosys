@@ -179,13 +179,13 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 		for (int i = 0; i < depth; i++)
 		{
 			int size_a = xorshift32(width) + 1;
-			int size_b = depth > 4 ? 0 : xorshift32(width) + 1;
+			int size_b = depth > 4 ? 1 : xorshift32(width) + 1;
 
 			if (mulbits_a + size_a*size_b <= 96 && mulbits_b + size_a + size_b <= 16 && xorshift32(2) == 1) {
 				mulbits_a += size_a * size_b;
 				mulbits_b += size_a + size_b;
 			} else
-				size_b = 0;
+				size_b = 1;
 
 			Macc::port_t this_port;
 

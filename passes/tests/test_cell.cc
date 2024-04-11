@@ -997,6 +997,7 @@ struct TestCellPass : public Pass {
 					}
 					if (!noeval)
 						run_eval_test(design, verbose, nosat, uut_name, vlog_file);
+					Pass::call(design, "select gate; stat");
 				}
 				delete design;
 			}

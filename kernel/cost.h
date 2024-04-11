@@ -43,7 +43,9 @@ struct CellCosts
 			{ ID($_AOI4_),   7 },
 			{ ID($_OAI4_),   7 },
 			{ ID($_MUX_),    4 },
-			{ ID($_NMUX_),   4 }
+			{ ID($_NMUX_),   4 },
+			{ ID($_DFF_P_),  1 },
+			{ ID($_DFF_N_),  1 },
 		};
 		return db;
 	}
@@ -65,7 +67,9 @@ struct CellCosts
 			{ ID($_AOI4_),    8 },
 			{ ID($_OAI4_),    8 },
 			{ ID($_MUX_),    12 },
-			{ ID($_NMUX_),   10 }
+			{ ID($_NMUX_),   10 },
+			{ ID($_DFF_P_),  16 },
+			{ ID($_DFF_N_),  16 },
 		};
 		return db;
 	}

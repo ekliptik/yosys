@@ -33,13 +33,12 @@ struct CellCosts
 	};
 
 	private:
-	dict<RTLIL::IdString, int> mod_cost_cache;
-	CostKind kind;
-	Design *design = nullptr;
-	bool type_only;
+	dict<RTLIL::IdString, int> mod_cost_cache_;
+	CostKind kind_;
+	Design *design_ = nullptr;
 
 	public:
-	CellCosts(CostKind kind, Design *design);
+	CellCosts(CellCosts::CostKind kind, RTLIL::Design *design) : kind_(kind), design_(design) { }
 
 	const dict<RTLIL::IdString, int>& gate_type_cost() {
 		static const dict<RTLIL::IdString, int> default_gate_db = {
@@ -83,7 +82,7 @@ struct CellCosts
 			{ ID($_DFF_P_),  16 },
 			{ ID($_DFF_N_),  16 },
 		};
-		switch (kind) {
+		switch (kind_) {
 			case DEFAULT:
 				return default_gate_db;
 			case CMOS:
@@ -93,38 +92,8 @@ struct CellCosts
 		}
 	}
 
-	int get(RTLIL::Module *mod)
-	{
-		if (mod->attributes.count(ID(cost)))
-			return mod->attributes.at(ID(cost)).as_int();
-
-		if (mod_cost_cache.count(mod->name))
-			return mod_cost_cache.at(mod->name);
-
-		int module_cost = 1;
-		for (auto c : mod->cells())
-			module_cost += get(c);
-
-		mod_cost_cache[mod->name] = module_cost;
-		return module_cost;
-	}
-
-	int get(RTLIL::Cell *cell)
-	{
-		if (gate_type_cost().count(cell->type))
-			return gate_type_cost().at(cell->type);
-
-		if (design && design->module(cell->type) && cell->parameters.empty())
-		{
-			return get(design->module(cell->type));
-		} else if (RTLIL::builtin_ff_cell_types().count(cell->type)) {
-			log_assert(cell->hasPort(ID::Q) && "Weird flip flop");
-			return cell->getParam(ID::WIDTH).as_int();
-		}
-
-		log_warning("Can't determine cost of %s cell (%d parameters).\n", log_id(cell->type), GetSize(cell->parameters));
-		return 1;
-	}
+	int get(RTLIL::Module *mod);
+	int get(RTLIL::Cell *cell);
 };
 
 YOSYS_NAMESPACE_END

@@ -28,6 +28,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+const int BLOAT = 1;
 static uint32_t xorshift32_state = 123456789;
 
 static uint32_t xorshift32(uint32_t limit) {
@@ -45,7 +46,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type.in(ID($mux), ID($pmux)))
 	{
-		int width = 1 + xorshift32(8);
+		int width = 1 + xorshift32(8 * BLOAT);
 		int swidth = cell_type == ID($mux) ? 1 : 1 + xorshift32(8);
 
 		wire = module->addWire(ID::A);
@@ -71,8 +72,8 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($bmux))
 	{
-		int width = 1 + xorshift32(8);
-		int swidth = 1 + xorshift32(4);
+		int width = 1 + xorshift32(8 * BLOAT);
+		int swidth = 1 + xorshift32(4 * BLOAT);
 
 		wire = module->addWire(ID::A);
 		wire->width = width << swidth;
@@ -92,8 +93,8 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($demux))
 	{
-		int width = 1 + xorshift32(8);
-		int swidth = 1 + xorshift32(6);
+		int width = 1 + xorshift32(8 * BLOAT);
+		int swidth = 1 + xorshift32(6 * BLOAT);
 
 		wire = module->addWire(ID::A);
 		wire->width = width;
@@ -113,7 +114,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($fa))
 	{
-		int width = 1 + xorshift32(8);
+		int width = 1 + xorshift32(8 * BLOAT);
 
 		wire = module->addWire(ID::A);
 		wire->width = width;
@@ -143,7 +144,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($lcu))
 	{
-		int width = 1 + xorshift32(8);
+		int width = 1 + xorshift32(8 * BLOAT);
 
 		wire = module->addWire(ID::P);
 		wire->width = width;
@@ -168,7 +169,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 	if (cell_type == ID($macc))
 	{
 		Macc macc;
-		int width = 1 + xorshift32(8);
+		int width = 1 + xorshift32(8 * BLOAT);
 		int depth = 1 + xorshift32(6);
 		int mulbits_a = 0, mulbits_b = 0;
 
@@ -215,7 +216,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($lut))
 	{
-		int width = 1 + xorshift32(6);
+		int width = 1 + xorshift32(6 * BLOAT);
 
 		wire = module->addWire(ID::A);
 		wire->width = width;
@@ -235,7 +236,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type == ID($sop))
 	{
-		int width = 1 + xorshift32(8);
+		int width = 1 + xorshift32(8 * BLOAT);
 		int depth = 1 + xorshift32(8);
 
 		wire = module->addWire(ID::A);
@@ -270,7 +271,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type_flags.find('A') != std::string::npos) {
 		wire = module->addWire(ID::A);
-		wire->width = 1 + xorshift32(8);
+		wire->width = 1 + xorshift32(8 * BLOAT);
 		wire->port_input = true;
 		cell->setPort(ID::A, wire);
 	}
@@ -278,9 +279,9 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 	if (cell_type_flags.find('B') != std::string::npos) {
 		wire = module->addWire(ID::B);
 		if (cell_type_flags.find('h') != std::string::npos)
-			wire->width = 1 + xorshift32(6);
+			wire->width = 1 + xorshift32(6 * BLOAT);
 		else
-			wire->width = 1 + xorshift32(8);
+			wire->width = 1 + xorshift32(8 * BLOAT);
 		wire->port_input = true;
 		cell->setPort(ID::B, wire);
 	}
@@ -301,7 +302,7 @@ static void create_gold_module(RTLIL::Design *design, RTLIL::IdString cell_type,
 
 	if (cell_type_flags.find('Y') != std::string::npos) {
 		wire = module->addWire(ID::Y);
-		wire->width = 1 + xorshift32(8);
+		wire->width = 1 + xorshift32(8 * BLOAT);
 		wire->port_output = true;
 		cell->setPort(ID::Y, wire);
 	}
@@ -891,7 +892,7 @@ struct TestCellPass : public Pass {
 		cell_types[ID($mod)] = "ABSY";
 		cell_types[ID($divfloor)] = "ABSY";
 		cell_types[ID($modfloor)] = "ABSY";
-		// cell_types[ID($pow)] = "ABsY";
+		cell_types[ID($pow)] = "ABsY";
 
 		cell_types[ID($logic_not)] = "ASY";
 		cell_types[ID($logic_and)] = "ABSY";

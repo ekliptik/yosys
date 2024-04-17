@@ -6,53 +6,58 @@ from pathlib import Path
 r = functools.partial(subprocess.check_output, text=True)
 
 cells = [
-    "$not",
-    "$pos",
-    "$neg",
-    "$and",
-    "$or",
-    "$xor",
-    "$xnor",
-    "$reduce_and",
-    "$reduce_or",
-    "$reduce_xor",
-    "$reduce_xnor",
-    "$reduce_bool",
-    "$shl",
-    "$shr",
-    "$sshl",
-    "$sshr",
-    "$shift",
-    "$shiftx",
-    "$lt",
-    "$le",
-    "$eq",
-    "$ne",
-    "$ge",
-    "$gt",
-    "$add",
-    "$sub",
-    "$mul",
-    "$div",
-    "$mod",
-    "$divfloor",
-    "$modfloor",
-    "$logic_not",
-    "$logic_and",
-    "$logic_or",
-    "$mux",
-    "$bmux",
-    "$demux",
-    "$lut",
-    "$sop",
-    "$alu",
-    "$lcu",
-    "$macc",
-    "$fa",
+    # "$not",
+    # "$pos",
+    # "$neg",
+    # "$and",
+    # "$or",
+    # "$xor",
+    # "$xnor",
+    # "$reduce_and",
+    # "$reduce_or",
+    # "$reduce_xor",
+    # "$reduce_xnor",
+    # "$reduce_bool",
+    # "$shl",
+    # "$shr",
+    # "$sshl",
+    # "$sshr",
+    # "$shift",
+    # "$shiftx",
+    # "$lt",
+    # "$le",
+    # "$eq",
+    # "$ne",
+    # "$ge",
+    # "$gt",
+    # "$add",
+    # "$sub",
+    # "$mul",
+
+    # "$div",
+    # "$mod",
+    # "$divfloor",
+    # "$modfloor",
+    # "$logic_not",
+    # "$logic_and",
+    # "$logic_or",
+    # "$mux",
+    # "$bmux",
+    # "$demux",
+
+    # "$lut",
+
+    # "$sop",
+    # "$alu",
+    # "$lcu",
+    # "$macc",
+    # "$fa",
+
+    # "$pow",
 ]
 # cells = ["$add"]
 out_dir = Path('sizes')
-test_count = 1000
+test_count = 100
 
 for cell in cells:
     print(cell)
@@ -61,6 +66,7 @@ for cell in cells:
     gate_counts = []
     port_widths = []
     y_widths = []
+    inp_widths = []
 
     def push_port(l, line):
         words = line.split()
@@ -75,16 +81,21 @@ for cell in cells:
         if "Number of cells" in line:
             gate_counts.append(int(line.split()[-1]))
         elif 'wire' in line and ('output' in line or 'input' in line):
-            push_port(port_widths, line)
             if line.endswith('\Y'):
                 push_port(y_widths, line)
+            elif 'input' in line:
+                push_port(inp_widths, line)
+            push_port(port_widths, line)
 
     result_count = len(gate_counts)
     assert result_count == test_count
     assert len(port_widths) % result_count == 0
+    assert len(inp_widths) % result_count == 0
     ports_per_cell = len(port_widths) // result_count
+    inputs_per_cell = len(inp_widths) // result_count
 
     port_size_sums = [sum(port_widths[i:i+ports_per_cell]) for i in range(0, len(port_widths), ports_per_cell)]
+    max_inp_widths = [max(inp_widths[i:i+inputs_per_cell]) for i in range(0, len(inp_widths), inputs_per_cell)]
 
     def out(x, y, suffix):
         if not len(x) == len(y):
@@ -109,3 +120,4 @@ for cell in cells:
 
     out(y_widths, gate_counts, 'y')
     out(port_size_sums, gate_counts, 'sum')
+    out(max_inp_widths, gate_counts, 'max_inp')

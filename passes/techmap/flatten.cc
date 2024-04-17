@@ -20,6 +20,7 @@
 #include "kernel/yosys.h"
 #include "kernel/utils.h"
 #include "kernel/sigtools.h"
+#include "kernel/cost.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -60,6 +61,8 @@ struct FlattenWorker
 	bool ignore_wb = false;
 	bool create_scopeinfo = true;
 	bool create_scopename = false;
+	CellCosts costs;
+	FlattenWorker(RTLIL::Design *design) : costs(CellCosts(CellCosts::DEFAULT, design)) { }
 	int max_cost = INT_MAX;
 
 	template<class T>
@@ -305,10 +308,14 @@ struct FlattenWorker
 				continue;
 			}
 
-			if (tpl->has_attribute(ID::cost) && tpl->attributes[ID::cost].as_int() > max_cost) {
-				log("Keeping %s.%s (module too big).\n", log_id(module), log_id(cell));
-				used_modules.insert(tpl);
-				continue;
+			// Deliberate short circuit
+			if (max_cost != INT_MAX) {
+				int cost = costs.get(cell);
+				if (cost > max_cost) {
+					log("Keeping %s.%s (module too big: %d > %d).\n", log_id(module), log_id(cell), cost, max_cost);
+					used_modules.insert(tpl);
+					continue;
+				}
 			}
 
 			log_debug("Flattening %s.%s (%s).\n", log_id(module), log_id(cell), log_id(cell->type));
@@ -358,7 +365,7 @@ struct FlattenPass : public Pass {
 		log_header(design, "Executing FLATTEN pass (flatten design).\n");
 		log_push();
 
-		FlattenWorker worker;
+		FlattenWorker worker(design);
 
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++) {

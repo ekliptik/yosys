@@ -2,22 +2,22 @@
 
 USING_YOSYS_NAMESPACE
 
-int CellCosts::get(RTLIL::Module *mod)
+unsigned int CellCosts::get(RTLIL::Module *mod)
 {
 	if (mod_cost_cache_.count(mod->name))
 		return mod_cost_cache_.at(mod->name);
 
-	int module_cost = 1;
+	unsigned int module_cost = 1;
 	for (auto c : mod->cells()) {
-        int new_cost = module_cost + get(c);
-        module_cost = new_cost >= module_cost ? new_cost : INT_MAX;
-    }
+		unsigned int new_cost = module_cost + get(c);
+		module_cost = new_cost >= module_cost ? new_cost : INT_MAX;
+	}
 
 	mod_cost_cache_[mod->name] = module_cost;
 	return module_cost;
 }
 
-static int y_coef(RTLIL::IdString type)
+static unsigned int y_coef(RTLIL::IdString type)
 {
 	// clang-format off
     if (// equality
@@ -55,7 +55,7 @@ static int y_coef(RTLIL::IdString type)
 	return 0;
 }
 
-static int max_inp_coef(RTLIL::IdString type)
+static unsigned int max_inp_coef(RTLIL::IdString type)
 {
 	// clang-format off
     if (// binop reduce
@@ -90,7 +90,7 @@ static int max_inp_coef(RTLIL::IdString type)
 	// clang-format on
 	return 0;
 }
-static int sum_coef(RTLIL::IdString type)
+static unsigned int sum_coef(RTLIL::IdString type)
 {
 	// clang-format off
     if (// right shift
@@ -142,7 +142,7 @@ static bool is_free(RTLIL::IdString type)
 	// clang-format on
 }
 
-int CellCosts::get(RTLIL::Cell *cell)
+unsigned int CellCosts::get(RTLIL::Cell *cell)
 {
 
 	if (gate_type_cost().count(cell->type))
@@ -164,7 +164,7 @@ int CellCosts::get(RTLIL::Cell *cell)
 		return width * y_coef(cell->type);
 	} else if (sum_coef(cell->type)) {
 		// linear with sum of port widths
-		int sum = 0;
+		unsigned int sum = 0;
 		RTLIL::IdString port_width_params[] = {
 		  ID::WIDTH, ID::A_WIDTH, ID::B_WIDTH, ID::S_WIDTH, ID::Y_WIDTH,
 		};
@@ -177,7 +177,7 @@ int CellCosts::get(RTLIL::Cell *cell)
 		return sum * sum_coef(cell->type);
 	} else if (max_inp_coef(cell->type)) {
 		// linear with largest input width
-		int max = 0;
+		unsigned int max = 0;
 		RTLIL::IdString input_width_params[] = {
 		  ID::WIDTH,
 		  ID::A_WIDTH,
@@ -187,7 +187,7 @@ int CellCosts::get(RTLIL::Cell *cell)
 
 		for (RTLIL::IdString param : input_width_params)
 			if (cell->hasParam(param))
-				max = std::max(max, cell->getParam(param).as_int());
+				max = std::max(max, (unsigned int)cell->getParam(param).as_int());
 
 		log_debug("%s max*coef %d * %d\n", cell->name.c_str(), max, max_inp_coef(cell->type));
 		return max;

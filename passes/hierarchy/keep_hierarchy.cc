@@ -18,62 +18,55 @@
  */
 
 #include "kernel/yosys.h"
-// #include "kernel/sigtools.h"
 #include "kernel/cost.h"
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-struct CellEstimatePass : public Pass {
-	CellEstimatePass() : Pass("cellestimate", "TODO") {} // TODO
+struct KeepHierarchyPass : public Pass {
+	KeepHierarchyPass() : Pass("keep_hierarchy", "TODO") {} // TODO
 	void help() override
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
-		// log("\n");
-		// log("    zinit [options] [selection]\n");
-		// log("\n");
-		// log("Add inverters as needed to make all FFs zero-initialized.\n");
-		// log("\n");
-		// log("    -all\n");
-		// log("        also add zero initialization to uninitialized FFs\n");
-		// log("\n");
-		// TODO
+		log("\n");
+		log("    keep_hierarchy [options]\n");
+		log("\n");
+		log("Add the keep_hierarchy attribute.\n");
+		log("\n");
+		log("    -max_cost <max_cost>\n");
+		log("        only add the attribute to modules estimated to have more\n");
+		log("        than <max_cost> gates\n");
 	}
 	void execute(std::vector<std::string> args, RTLIL::Design *design) override
 	{
-		CellCosts::CostKind cost_kind = CellCosts::DEFAULT;
+		unsigned int max_cost = 0;
 
-		log_header(design, "Executing cell estimate pass.\n");
+		log_header(design, "Executing keep_hierarchy pass.\n");
 
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++) {
-			if (args[argidx] == "-cmos") {
-				cost_kind = CellCosts::CMOS;
+			if (args[argidx] == "-max_cost" && argidx+1 < args.size()) {
+				max_cost = std::stoi(args[++argidx].c_str());
 				continue;
 			}
 			break;
 		}
 		extra_args(args, argidx, design);
 
-        // int cells_known_cost = 0;
-        // int cell_count = 0;
-
-		CellCosts costs(cost_kind, design);
+		CellCosts costs(CellCosts::DEFAULT, design);
 
 		for (auto module : design->selected_modules()) {
-
-			int module_cost = 0;
-			// TODO should we really respect cell selection?
-			// for (auto cell : module->selected_cells()) {
-			// 	log_debug("Cost for cell %s (%s): %d\n", log_id(cell), log_id(cell->type), cost);
-			// }
-			module_cost = costs.get(module);
-			log("Cost estimate for module %s: %d\n", log_id(module->name), module_cost);
-			module->attributes[ID::cost] = module_cost;
+			if (max_cost) {
+				unsigned int cost = costs.get(module);
+				if (cost > max_cost) {
+					log("Marking %s (module too big: %d > %d).\n", log_id(module), cost, max_cost);
+					module->set_bool_attribute(ID::keep_hierarchy);
+				}
+			} else {
+				log("Marking %s.\n", log_id(module));
+				module->set_bool_attribute(ID::keep_hierarchy);
+			}
 		}
-        // float known_percent = (static_cast<double>(cells_known_cost) / cell_count) * 100.0;
-		// if (!std::isnan(known_percent))
-		// 	log("Cost estimates known for %.0f%% cells\n", known_percent);
 	}
 } ZinitPass;
 

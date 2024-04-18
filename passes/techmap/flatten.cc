@@ -20,7 +20,6 @@
 #include "kernel/yosys.h"
 #include "kernel/utils.h"
 #include "kernel/sigtools.h"
-#include "kernel/cost.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -61,9 +60,6 @@ struct FlattenWorker
 	bool ignore_wb = false;
 	bool create_scopeinfo = true;
 	bool create_scopename = false;
-	CellCosts costs;
-	FlattenWorker(RTLIL::Design *design) : costs(CellCosts(CellCosts::DEFAULT, design)) { }
-	int max_cost = INT_MAX;
 
 	template<class T>
 	void map_attributes(RTLIL::Cell *cell, T *object, IdString orig_object_name)
@@ -308,16 +304,6 @@ struct FlattenWorker
 				continue;
 			}
 
-			// Deliberate short circuit
-			if (max_cost != INT_MAX) {
-				int cost = costs.get(cell);
-				if (cost > max_cost) {
-					log("Keeping %s.%s (module too big: %d > %d).\n", log_id(module), log_id(cell), cost, max_cost);
-					used_modules.insert(tpl);
-					continue;
-				}
-			}
-
 			log_debug("Flattening %s.%s (%s).\n", log_id(module), log_id(cell), log_id(cell->type));
 			// If a design is fully selected and has a top module defined, topological sorting ensures that all cells
 			// added during flattening are black boxes, and flattening is finished in one pass. However, when flattening
@@ -365,7 +351,7 @@ struct FlattenPass : public Pass {
 		log_header(design, "Executing FLATTEN pass (flatten design).\n");
 		log_push();
 
-		FlattenWorker worker(design);
+		FlattenWorker worker;
 
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++) {
@@ -379,13 +365,6 @@ struct FlattenPass : public Pass {
 			}
 			if (args[argidx] == "-scopename") {
 				worker.create_scopename = true;
-				continue;
-			}
-			// TODO when maxcost is used, all modules in top should have costs estimated.
-			// If not, it would be best to automagically run cellestimate on them instead
-			// of ignoring them
-			if (args[argidx] == "-maxcost"  && argidx+1 < args.size()) {
-				worker.max_cost = std::stoi(args[++argidx]);
 				continue;
 			}
 			break;

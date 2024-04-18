@@ -92,8 +92,8 @@ struct CellCosts
 		}
 	}
 
-	int get(RTLIL::Module *mod);
-	int get(RTLIL::Cell *cell);
+	unsigned int get(RTLIL::Module *mod);
+	unsigned int get(RTLIL::Cell *cell);
 };
 
 YOSYS_NAMESPACE_END

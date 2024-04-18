@@ -8,8 +8,10 @@ int CellCosts::get(RTLIL::Module *mod)
 		return mod_cost_cache_.at(mod->name);
 
 	int module_cost = 1;
-	for (auto c : mod->cells())
-		module_cost += get(c);
+	for (auto c : mod->cells()) {
+        int new_cost = module_cost + get(c);
+        module_cost = new_cost >= module_cost ? new_cost : INT_MAX;
+    }
 
 	mod_cost_cache_[mod->name] = module_cost;
 	return module_cost;

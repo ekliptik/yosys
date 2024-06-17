@@ -207,6 +207,7 @@ endif
 
 ifeq ($(CONFIG),clang)
 CXX = clang++
+LINKFLAGS += -fuse-ld=lld
 CXXFLAGS += -std=$(CXXSTD) -Os
 ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H $(ABC_ARCHFLAGS)"
 

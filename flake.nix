@@ -18,7 +18,7 @@
         yosys = pkgs.llvmPackages.libcxxStdenv.mkDerivation {
           name = "yosys";
           src = ./. ;
-          # nativeBuildInputs = with pkgs; [ autoPatchelfHook ];
+          nativeBuildInputs = with pkgs; [ autoPatchelfHook ];
           buildInputs = with pkgs; [ stdenv.cc.cc bison flex libffi tcl readline python3 zlib git pkg-configUpstream tracy ];
           checkInputs = with pkgs; [ gtest ];
           propagatedBuildInputs = [ abc-verifier ];

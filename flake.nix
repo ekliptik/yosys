@@ -14,11 +14,12 @@
         };
         # TODO: don't override src when ./abc is empty
         # which happens when the command used is `nix build` and not `nix build ?submodules=1`
-        abc-verifier = pkgs.abc-verifier.overrideAttrs(x: y: {src = ./abc;});
+        abc-verifier = pkgs.abc-verifier;
         yosys = pkgs.llvmPackages.libcxxStdenv.mkDerivation {
           name = "yosys";
           src = ./. ;
-          buildInputs = with pkgs; [ bison flex libffi tcl readline python3 llvmPackages.libcxxClang zlib git pkg-configUpstream tracy ];
+          # nativeBuildInputs = with pkgs; [ autoPatchelfHook ];
+          buildInputs = with pkgs; [ stdenv.cc.cc bison flex libffi tcl readline python3 zlib git pkg-configUpstream tracy ];
           checkInputs = with pkgs; [ gtest ];
           propagatedBuildInputs = [ abc-verifier ];
           preConfigure = "make config-clang";
@@ -42,7 +43,7 @@
         packages.default = yosys;
         defaultPackage = yosys;
         devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [ clang bison flex libffi tcl readline python3 llvmPackages.libcxxClang zlib git gtest abc-verifier tracy ];
+          buildInputs = with pkgs; [ stdenv.cc.cc bison flex libffi tcl readline python3 zlib git gtest abc-verifier tracy ];
         };
       }
     );
